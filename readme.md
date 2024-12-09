@@ -26,3 +26,12 @@ models: Here we do data modeling
 routes: Here do routes
 utils : here we write utility (the functionality which are using multiple time )
 
+
+#
+if there are are any empty folder is needed for the work flow , we create a empty folder .
+but empty folder are not tracked by git so we create a empty file named ".gitkeep" under this empty folder
+
+#
+***** DataBase is always in another continent*****
+so, when we do any operation with database , its take some time -> for this we use async - await
+
