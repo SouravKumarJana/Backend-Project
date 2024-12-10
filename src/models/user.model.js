@@ -50,7 +50,7 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function (next){            // Here we use "pre" hooks , before save the passwod at database , we want to execute the middleware(Here encrypt the password)  // encryption take time so we use async-await
     if(this.isModified("password")){
-        this.password = bcrypt.hash(this.password, 10)     // encrypt the password // Here we encrypt password when any change occured in password field...Here 10 number of round (salting and then hassing)
+        this.password = await bcrypt.hash(this.password, 10)     // encrypt the password // Here we encrypt password when any change occured in password field...Here 10 number of round (salting and then hassing)
         next()
     }
     else{
