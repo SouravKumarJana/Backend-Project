@@ -1,13 +1,22 @@
 //require('dotenv').config({path: './.env'})                  //always at first file import the .env file , to give the acess the .env file to all other  file
 import dotenv from "dotenv"
 import connectDB from "./db/index.js"
+import {app} from "./app.js"
 
 dotenv.config({
     path: './.env'
 })
 
 
-connectDB()                           //for creating connection with databse , call connectDB()
+connectDB()                                        //for creating connection with databse , call connectDB()
+.then(()=>{
+    app.listen(process.env.PORT || 8000), ()=>{
+        console.log(`server running at port : ${process.env.PORT}`)
+    }
+})
+.catch((error)=>{
+    console.log("Mongo Db cinnection is failed !!!", error)
+})
 
 
 

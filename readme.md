@@ -35,3 +35,34 @@ but empty folder are not tracked by git so we create a empty file named ".gitkee
 ***** DataBase is always in another continent*****
 so, when we do any operation with database , its take some time -> for this we use async - await
 
+#
+when we use middle-ware , we generally use app.use()
+
+#
+Cookies are small data that are stored on a client side and sent to the client along with server requests. Cookies have various functionality, they can be used for maintaining sessions and adding user-specific features in your web app. For this, we will use cookie-parser module of npm which provides middleware for parsing of cookies.
+
+for use cookies install middleware : npm i cookie-parser
+
+#
+The word CORS stands for “Cross-Origin Resource Sharing”. Cross-Origin Resource Sharing is an HTTP-header based mechanism implemented by the browser which allows a server or an API(Application Programming Interface) to indicate any origins (different in terms of protocol, hostname, or port) other than its origin from which the unknown origin gets permission to access and load resources. The cors package available in the npm registry is used to tackle CORS errors in a Node.js application. 
+
+=> Why Use CORS?
+The reasons to use CORS in the application are
+
+Security: CORS helps to prevent malicious websites from accessing sensitive information on your server.
+
+Resource Sharing: It allows controlled access to resources on a server from a different origin, enabling web applications to make API requests to external services.
+
+for install install : npm i cors
+#
+bcrypt : bcrypt is use hash the password that provide the password..
+[brypt documents for reading]  (https://www.geeksforgeeks.org/npm-bcrypt/)
+
+
+#step of upload file :
+step1: using multer we take  files from user ans tempuraly store at local server 
+step2 : then upload file at cloudinary, and we save the cloudinary url (of this file) at the database
+
+#fs:
+fs is a library if nodejs that help to handle the file
+[document link of fs] (https://nodejs.org/api/fs.html#fspromisesunlinkpath)
