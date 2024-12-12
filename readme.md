@@ -66,3 +66,9 @@ step2 : then upload file at cloudinary, and we save the cloudinary url (of this 
 #fs:
 fs is a library if nodejs that help to handle the file
 [document link of fs] (https://nodejs.org/api/fs.html#fspromisesunlinkpath)
+
+#
+
+Access tokens are used to access resources, while refresh tokens are used to get new access tokens when the old ones expire. Both access and refresh tokens often use a format called JSON Web Token(JWT). 
+
+[token reading link] (https://www.geeksforgeeks.org/access-token-vs-refresh-token-a-breakdown/)
