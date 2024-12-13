@@ -4,7 +4,7 @@ import {User} from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {APIResponse} from "../utils/APIResponse.js"
 import jwt from "jsonwebtoken"
-
+import mongoose from "mongoose"
 
 const generateAccessAndRefreshTokens = async (userId) =>{       //See this method at time of login function
     try {
@@ -223,5 +223,259 @@ const refreshAccessToken = asyncHandler( async (req, res) =>{      // after expi
 
 })
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    
+    const {oldPassword, newPassword, confirmPassword} = req.body
 
-export {registerUser , loginUser, logoutUser, refreshAccessToken}
+    const user =await User.findById(req.user?._id)       // Here user want to change password , means it is sure that user is "logged in" , 
+                                                //so auth.middleware.js is already executed (when the user was login) .so at req.user ,the all data of this user is present
+    if(newPassword!== confirmPassword) {
+        throw new APIError(401, "comfirm password not matched with new password")
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)   // cheack the old password (that given by the user) is matched with the password that saved at dataBase
+
+    if(!isPasswordCorrect) {
+        throw APIError(400, "Invalid old password")
+    }
+    
+    user.password= newPassword                       // if password matched
+    await user.save({validateBeforeSave: false})     // save the new password at database // at database always save the encrypted password , 
+                                                     //because : if you see the-> user.model.js ; here at "save" section of password always a hooks is called using "pre" (in the hook we encrypt the password using bcrypt before saving)
+
+    return res.status(200)
+    .json(
+        new APIResponse(200, {}, "password change successfully")
+    )
+})
+
+
+const getCurrentUser = asyncHandler( async (req, res) =>{
+    return res.status(200)
+    .json(
+        new APIResponse(200, req.user, "Current User fetched Successfully") 
+    )                                                                        //For to get currentUser,  user should logged in so , from req.user of auth.miidleware.js , we can get user 
+})
+
+const updateAccountDetails = asyncHandler( async (req, res) =>{
+    const {fullname, email} = req.body 
+
+    if(!fullname || !email){
+        throw new APIError(400, "all fields are required")
+    }
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullname: fullname,
+                email: email
+            }
+        },
+        {new: true}
+    ).select("-password")     // remove password field (because we dont want to password at response)
+
+    return res.status(200)
+    .json(
+        new APIResponse(200, user, "account details update successfully" )
+    )
+})
+
+
+const updateUserAvatar = asyncHandler(async (req, res) =>{
+    const avatarLocalPath = req.file?.path                   // take the new avatar image that user gives  .. Actually req.file comes from multer (multer.middleware)
+
+    if(!avatarLocalPath){
+        throw new APIError(400, "Avatar file is missing")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+        throw new APIError(400, "Error while uploading on avatar")
+    }
+
+    const user = await User.findByIdAndUpdate(         // it find by the id and then update and save
+        req.user?._id,
+        {
+            $set:{
+                avatar: avatar.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res.status(200)
+    .json(
+        new APIResponse(200, user, "avatar is successfully updated")
+    )
+})
+
+const updateUserCoverImage = asyncHandler( async (req, res) =>{
+    const coverImageLocalPath = req.file?.path
+
+    if(!coverImageLocalPath){
+        throw APIError(400, "coverImage file is missing")
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!coverImage.url){
+        throw new APIError(400, "Error while uploading on coverImage")
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage: coverImage.url
+            }
+        },
+        {new: true}
+    ).select("-password")
+
+    return res.status(200)
+    .json(
+        new APIResponse(200, user, "coverImage is successfully updated")
+    )
+})
+
+
+const getUserChannelProfile = asyncHandler(async(req, res)=>{  //Here we want to see the other channel profile
+    const {username} = req.params            // actually when we click the channel link , then through the link we can see the channel profile
+
+    if(!username.trim()) {
+        throw new APIError(400, "username is missing")
+    }
+
+    const channel = await User.aggregate([                          //*****  the all code of aggrigation-pipeline not go through mongoose , it goes to MongoDb directly
+        {
+            $match:{
+                username: username?.toLowerCase()     // it gives the only one collection -> that is the user(channel) which profile we wnat to see
+            }
+        },
+        {
+            $lookup: {                                      // join Subscription model with User model  
+                from: "subscriptions",                     // "Subscription" model save at mongoDb as "subscriptions"
+                localField: "_id",
+                foreignField: "channel",             // if you want subscriber then see the documants where channel(channel_id)=== user_id
+                as: "subscribers"                    //Here create a array named subscribers where store the documents, where  _id === channel
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",          // if you want the users which are subscribe by user (which profile we want to see) , then see the documents where user_id === subscriber (subscriber_id)
+                as: "subscribedTo"                   //Here create a array named subscribedTo where store the documents, where _id === subscriber (subscriber-id)
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size: "$subscribers"
+                },
+                
+                channelSubscribedCount: {
+                    $size:"$subscribedTo"
+                },
+                isSubscribed: {               // Here we try to cheack , I (means the user who want to see the channel profile of other user ) subscribe or not the channel
+                    $cond:{
+                        if: {$in: [req.user?._id, "$subscribers.subscriber"]} ,  // the user (who want see the profile) surely is logged-in , so the req.user is means you (the user who want to see) 
+                                                                                //  your id is present or not in subscribes of user (which profile you want to see)
+                        then: true,                                             // if present return true , else return false
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullname: 1,
+                username: 1,
+                subscribersCount: 1,
+                channelSubscribedCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            }
+        }
+    ])
+
+    if(!channel?.length){
+        throw new APIError(404, "Channel does not exist")
+    }
+    return res.status(200)
+    .json(
+        new APIResponse(200, channel[0] , "User channel fetched successfully")
+    )
+})
+
+
+const getWatchHistory = asyncHandler( async(req, res) =>{
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)       // req.user._id : it gives the String (like-> '12bdhceb2382') , Here want MongoDb id (like-> ObjectId('12bdhceb2382'))  because the aggrigation pipeline code directly go to mongoose not go through mongoose
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: _id,
+                as: "watchHistory",
+                pipeline:[                              // create a neasted pipeline
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [                // neasted pipeline
+                                {
+                                    $project: {        // under pipline we use $projecte, so it projected at under owner field
+                                        fullname: 1,
+                                        username:1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{                     //Here we override the existing owner field
+                                $first: "$owner"       // give the owner as object 
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res.status(200)
+    .json(
+        new APIResponse(
+            200, 
+            user[0].watchHistory,
+            "Watch history fetch successfully" 
+        )
+    )
+})
+
+
+export {   
+    registerUser, 
+    loginUser, 
+    logoutUser, 
+    refreshAccessToken, 
+    changeCurrentPassword, 
+    getCurrentUser, 
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage,
+    getUserChannelProfile,
+    getWatchHistory
+}
