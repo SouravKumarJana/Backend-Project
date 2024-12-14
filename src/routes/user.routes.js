@@ -52,6 +52,6 @@ router.route("/update-coverImage").patch(verifyJWT, upload.single("coverImage"),
 
 router.route("/channel/:username").get(verifyJWT, getUserChannelProfile)       //at getUserChannelProfile we get "username" from req.params (means from url) .so here routes should be "/something/:username"  
 
-router.route("/watch-hitory").get(verifyJWT, getWatchHistory)
+router.route("/watch-history").get(verifyJWT, getWatchHistory)
 
 export default router;

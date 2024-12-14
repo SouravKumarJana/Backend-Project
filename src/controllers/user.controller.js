@@ -227,7 +227,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     
     const {oldPassword, newPassword, confirmPassword} = req.body
 
-    const user =await User.findById(req.user?._id)       // Here user want to change password , means it is sure that user is "logged in" , 
+    const user = await User.findById(req.user?._id)       // Here user want to change password , means it is sure that user is "logged in" , 
                                                 //so auth.middleware.js is already executed (when the user was login) .so at req.user ,the all data of this user is present
     if(newPassword!== confirmPassword) {
         throw new APIError(401, "comfirm password not matched with new password")
@@ -416,14 +416,14 @@ const getWatchHistory = asyncHandler( async(req, res) =>{
     const user = await User.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(req.user?._id)       // req.user._id : it gives the String (like-> '12bdhceb2382') , Here want MongoDb id (like-> ObjectId('12bdhceb2382'))  because the aggrigation pipeline code directly go to mongoose not go through mongoose
+                _id: new mongoose.Types.ObjectId(req.user?._id)      // req.user._id : it gives the String (like-> '12bdhceb2382') , Here want MongoDb id (like-> ObjectId('12bdhceb2382'))  because the aggrigation pipeline code directly go to mongoose not go through mongoose
             }
         },
         {
             $lookup: {
                 from: "videos",
                 localField: "watchHistory",
-                foreignField: _id,
+                foreignField: "_id",
                 as: "watchHistory",
                 pipeline:[                              // create a neasted pipeline
                     {
